@@ -1,0 +1,49 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Live Dictation</title>
+<style>
+:root { color-scheme: light dark; --bg: #fafaf7; --fg: #1c1c1a; --dim: #8a8a84; --live: #c2410c; }
+@media (prefers-color-scheme: dark) { :root { --bg: #141413; --fg: #ecebe6; --dim: #78766f; --live: #fb923c; } }
+body { margin: 0; background: var(--bg); color: var(--fg); font: 1.5rem/1.55 system-ui, sans-serif; }
+header { position: sticky; top: 0; background: var(--bg); padding: .7rem 1rem; font-size: .85rem; color: var(--dim);
+         display: flex; gap: 1.2rem; border-bottom: 1px solid color-mix(in srgb, var(--dim) 30%, transparent); }
+header.on #s { color: var(--live); }
+header button { margin-left: auto; font: inherit; color: var(--fg); background: none; cursor: pointer;
+                border: 1px solid color-mix(in srgb, var(--dim) 50%, transparent); border-radius: 6px; padding: .15rem .8rem; }
+main { max-width: 52rem; margin: 0 auto; padding: 1.2rem 1rem 40vh; white-space: pre-wrap; overflow-wrap: anywhere; }
+#t { color: var(--dim); }
+</style>
+</head>
+<body>
+<header id="h"><span id="s">connecting…</span><span id="x"></span><button id="clear">Clear page</button></header>
+<main><span id="text"></span> <span id="t"></span></main>
+<script>
+const $ = id => document.getElementById(id);
+let g = -1, w = 0, fresh = true; /* fresh: the page is empty, so the next words lose their leading space */
+const clear = () => { $('text').textContent = ''; fresh = true; };
+$('clear').onclick = clear; /* the page only: the board keeps its transcript, which a reload shows again */
+async function poll() {
+  try {
+    const r = await (await fetch(`/t?g=${g}&w=${w}`)).json();
+    const follow = innerHeight + scrollY >= document.body.scrollHeight - 80;
+    if (r.reset) clear();
+    g = r.g; w = r.w;
+    const add = fresh ? r.add.trimStart() : r.add;
+    if (add) $('text').append(add), fresh = false;
+    $('t').textContent = r.t;
+    $('s').textContent = r.s + (r.note ? ': ' + r.note : '');
+    $('x').textContent = r.x ? r.x.toFixed(2) + '× real time' : '';
+    $('h').className = r.s === 'listening' ? 'on' : '';
+    if (follow) scrollTo(0, document.body.scrollHeight);
+  } catch (e) {
+    $('s').textContent = 'offline: retrying';
+  }
+  setTimeout(poll, 300);
+}
+poll();
+</script>
+</body>
+</html>

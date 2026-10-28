@@ -1,0 +1,6 @@
+build/
+sdkconfig
+sdkconfig.old
+build.log
+managed_components/
+models/*.bin
